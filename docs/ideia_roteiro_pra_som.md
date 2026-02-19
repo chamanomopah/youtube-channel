@@ -1,0 +1,1 @@
+mandar um roteiro pro claude code e ele analisar quais audios vão ser usados 
