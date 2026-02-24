@@ -1,5 +1,7 @@
 é um video compilado explicativo sobre todos os quadrinhos de um personagem, saga, ou arco especifico 
 
+formato unico titulo de video =  Every "character/team/Story arc" Comics Explained - Issue by Issue
+
 comicvine (assets(cover das issues, imagens gerais de personagens) )
 
 contexto:
