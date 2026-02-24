@@ -170,3 +170,74 @@ D3 is for dynamic visualization
 D3’s most novel concept is its data join: given a set of data and a set of DOM elements, the data join allows you to apply separate operations for entering, updating, and exiting elements. If you’re only creating static charts (charts that don’t animate or respond to user input), you may find this concept unintuitive or even bizarre because it’s not needed.
 
 The data join exists so that you can control exactly what happens when your data changes and update the display in response. This direct control allows extremely performant updates — you only touch the elements and attributes that need changing, without diffing the DOM — and smooth animated transitions between states. D3 shines for dynamic, interactive visualizations. (Try option-clicking the state toggles in “512 Paths to the White House” from 2012. Really.)
+
+D3 in React
+Most D3 modules (including d3-scale, d3-array, d3-interpolate, and d3-format) don’t interact with the DOM, so there is no difference when using them in React. You can use them in JSX for purely declarative visualization, such as the line plot below.
+
+
+LinePlot.jsx
+jsx
+import * as d3 from "d3";
+
+export default function LinePlot({
+  data,
+  width = 640,
+  height = 400,
+  marginTop = 20,
+  marginRight = 20,
+  marginBottom = 20,
+  marginLeft = 20
+}) {
+  const x = d3.scaleLinear([0, data.length - 1], [marginLeft, width - marginRight]);
+  const y = d3.scaleLinear(d3.extent(data), [height - marginBottom, marginTop]);
+  const line = d3.line((d, i) => x(i), y);
+  return (
+    <svg width={width} height={height}>
+      <path fill="none" stroke="currentColor" strokeWidth="1.5" d={line(data)} />
+      <g fill="white" stroke="currentColor" strokeWidth="1.5">
+        {data.map((d, i) => (<circle key={i} cx={x(i)} cy={y(d)} r="2.5" />))}
+      </g>
+    </svg>
+  );
+}
+Sandbox ↗︎
+
+D3 modules that operate on selections (including d3-selection, d3-transition, and d3-axis) do manipulate the DOM, which competes with React’s virtual DOM. In those cases, you can attach a ref to an element and pass it to D3 in a useEffect hook.
+
+
+LinePlot.jsx
+jsx
+import * as d3 from "d3";
+import {useRef, useEffect} from "react";
+
+export default function LinePlot({
+  data,
+  width = 640,
+  height = 400,
+  marginTop = 20,
+  marginRight = 20,
+  marginBottom = 30,
+  marginLeft = 40
+}) {
+  const gx = useRef();
+  const gy = useRef();
+  const x = d3.scaleLinear([0, data.length - 1], [marginLeft, width - marginRight]);
+  const y = d3.scaleLinear(d3.extent(data), [height - marginBottom, marginTop]);
+  const line = d3.line((d, i) => x(i), y);
+  useEffect(() => void d3.select(gx.current).call(d3.axisBottom(x)), [gx, x]);
+  useEffect(() => void d3.select(gy.current).call(d3.axisLeft(y)), [gy, y]);
+  return (
+    <svg width={width} height={height}>
+      <g ref={gx} transform={`translate(0,${height - marginBottom})`} />
+      <g ref={gy} transform={`translate(${marginLeft},0)`} />
+      <path fill="none" stroke="currentColor" strokeWidth="1.5" d={line(data)} />
+      <g fill="white" stroke="currentColor" strokeWidth="1.5">
+        {data.map((d, i) => (<circle key={i} cx={x(i)} cy={y(d)} r="2.5" />))}
+      </g>
+    </svg>
+  );
+}
+Sandbox ↗︎
+
+For more guidance using D3 in React, see Amelia Wattenberger’s post.
+

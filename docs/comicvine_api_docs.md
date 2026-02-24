@@ -1106,3 +1106,28 @@ name	Name of the volume.
 publisher	The primary publisher a volume is attached to.		
 site_detail_url	URL pointing to the volume on Giant Bomb.		
 start_year	The first year this volume appeared in comics.		
+What is this?
+These APIs provide full access to our structured-wiki content data in XML and JSON formats. It does not provide data specific to our userbase. You must sign up for a unique api key for each site individually.
+
+Oh... and something else
+Welcome google searcher. You're just stumbled into exactly what you were looking for. An extremely mature, well organized and continuely updated resource of comic information. The tools to build it were put together by a few dedicated developers at CBS Interactive. The data itself comes from a KISS-like-army of comic fans that contribute millions of edits to the resource every year.
+
+Now that you've found this motherload, do the right thing. Don't just steal it and build some crappy collection app. Build something awesome. Better yet, build something awesome, contact us when you have a prototype and let's figure out a way to work together. We like people that build awesome things.
+
+For Pete's sake don't email us about your unfinished app that you might build... Just go build the thing already, you can do it.
+
+Or maybe I've gotten this all wrong and you're already a Comic Vine user. In that case... good luck duder, thanks for helping us build this silly website.
+
+Terms of Use
+Non-commercial use only
+You can make some great things with our API, but unfortunately money isn't one of them. The API is strictly for non-commercial use only. Commercial use will result in your API key being revoked.
+Rate limiting
+We restrict the number of requests made per user/hour. We officially support 200 requests per resource, per hour. In addition, we implement velocity detection to prevent malicious use. If too many requests are made per second, you may receive temporary blocks to resources. These features are included to help keep the API healthy for all of our users. If you have a question regarding rate limiting, please comment in our API Developer forum. It is suggested that you cache responses in your app to prevent duplicated requests from making unique requests.
+Don't build a competing product
+We'll take care of being an editable structured data resource. Concentrate on using the data in a unique way.
+Give credit where credit is due
+On any page you use our data, please link back to us. It's the least you can do to contribute.
+Don't redistribute in another form
+Do not edit, manipulate or reproduce on any other medium. Do not use our brand name to promote your work. If you want to use our name, email us.
+We can refuse access at anytime
+It's a free resource, don't abuse the years of work of thousands of contributors.
