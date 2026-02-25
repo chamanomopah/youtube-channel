@@ -256,14 +256,16 @@ def validate_downloaded_image(image_path: Path) -> bool:
         return False
 
 
-def navigate_to_next_page(driver) -> tuple[bool, Optional[str]]:
+def navigate_to_next_page(driver) -> tuple[bool, Optional[str], Optional[int], Optional[str]]:
     """
     Click the "Next" button and detect if we've moved to a new issue.
 
     Returns:
-        (success, issue_number) tuple where:
+        (success, issue_number, page_fragment, page_title) tuple where:
         - success: True if navigation succeeded
         - issue_number: Current issue number after navigation, or None
+        - page_fragment: Page number from URL fragment (e.g., #13 -> 13), or None
+        - page_title: Page title (may contain issue info), or None
     """
     # Get current URL before navigation
     current_url = driver.current_url
@@ -293,16 +295,16 @@ def navigate_to_next_page(driver) -> tuple[bool, Optional[str]]:
                 continue
 
         if not next_btn:
-            return (False, current_issue)
+            return (False, current_issue, None, None)
 
         # Check if button is disabled
         class_attr = next_btn.get_attribute("class") or ""
         style_attr = next_btn.get_attribute("style") or ""
 
         if "disabled" in class_attr.lower():
-            return (False, current_issue)
+            return (False, current_issue, None, None)
         if "display: none" in style_attr or "display:none" in style_attr:
-            return (False, current_issue)
+            return (False, current_issue, None, None)
 
         # Click the button
         driver.execute_script("arguments[0].scrollIntoView();", next_btn)
@@ -316,11 +318,29 @@ def navigate_to_next_page(driver) -> tuple[bool, Optional[str]]:
         new_url = driver.current_url
         new_issue = extract_issue_number_from_url(new_url)
 
-        return (True, new_issue)
+        # Extract page number from URL fragment (#13 -> 13)
+        page_fragment = None
+        fragment_match = re.search(r'#(\d+)', new_url)
+        if fragment_match:
+            page_fragment = int(fragment_match.group(1))
+
+        # Get page title for issue detection
+        page_title = None
+        try:
+            page_title = driver.title
+        except Exception:
+            pass
+
+        # DEBUG: Log URL changes
+        if current_url != new_url:
+            print(f"  [DEBUG] URL: {new_url[:80]}...")
+            print(f"  [DEBUG] Title: {page_title[:60] if page_title else 'N/A'}...")
+
+        return (True, new_issue, page_fragment, page_title)
 
     except Exception as e:
         print(f"  [WARN] Navigation error: {e}")
-        return (False, current_issue)
+        return (False, current_issue, None, None)
 
 
 def setup_driver(headless: bool = False) -> webdriver.Chrome:
@@ -537,7 +557,7 @@ def scrape_issue(volume_name: str, issue_number: str, url: Optional[str] = None,
 
         # Scrape pages
         page_num = start_page
-        max_pages = 50  # Safety limit - stop if downloading more than 50 pages
+        max_pages = 40  # Safety limit - most issues have < 40 pages
         downloaded_pages = []
         previous_hash = None
         all_hashes = set()  # Track ALL hashes to detect duplicates across pages
@@ -596,14 +616,14 @@ def scrape_issue(volume_name: str, issue_number: str, url: Optional[str] = None,
                     break
 
                 # Navigate to next page
-                success, current_issue = navigate_to_next_page(driver)
+                success, current_issue, page_fragment, page_title = navigate_to_next_page(driver)
 
                 if not success:
                     print(f"\n[INFO] No more pages")
                     break
 
                 # Check if we've moved to a new issue
-                if stop_at_next_issue and current_issue != expected_issue:
+                if stop_at_next_issue and current_issue is not None and current_issue != expected_issue:
                     print(f"\n[INFO] Reached next issue (Issue #{current_issue})")
                     print(f"[INFO] Stopping at issue boundary")
                     break
@@ -652,14 +672,14 @@ def scrape_issue(volume_name: str, issue_number: str, url: Optional[str] = None,
                 break
 
             # Navigate to next page
-            success, current_issue = navigate_to_next_page(driver)
+            success, current_issue, page_fragment, page_title = navigate_to_next_page(driver)
 
             if not success:
                 print(f"\n[INFO] No more pages")
                 break
 
             # Check if we've moved to a new issue
-            if stop_at_next_issue and current_issue != expected_issue:
+            if stop_at_next_issue and current_issue is not None and current_issue != expected_issue:
                 print(f"\n[INFO] Reached next issue (Issue #{current_issue})")
                 print(f"[INFO] Stopping at issue boundary")
                 break
