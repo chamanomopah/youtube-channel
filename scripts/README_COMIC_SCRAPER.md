@@ -13,6 +13,8 @@ The `selenium_webscraping_pages` script downloads comic pages from readcomiconli
 - ✅ **Image validation**: Validates aspect ratio and dimensions to ensure only comic pages are downloaded
 - ✅ **Metadata tracking**: Saves metadata.json with issue info and page manifest
 - ✅ **Project conventions**: Uses same status indicators ([OK], [FAIL], [SKIP]) and directory structure
+- ✅ **Issue boundary detection**: Automatically stops at the end of an issue (doesn't leak into next issue)
+- ✅ **All issues mode**: Can scrape all issues in a volume automatically
 
 ## Installation
 
@@ -24,25 +26,40 @@ pip install selenium webdriver-manager requests pillow
 
 ## Usage
 
-### Basic Usage
+### Scraping Modes
+
+#### Single Issue Mode
+Scrape only the specified issue:
 
 ```bash
-# Scrape Absolute Batman #1 (auto-constructs URL)
-python scripts/selenium_webscraping_pages "Absolute Batman" 1
+python scripts/selenium_webscraping_pages.py "Absolute Batman" 7
 ```
+
+The script will:
+- Download only the pages from Issue #7
+- Automatically stop when reaching the next issue
+- Respect the page count indicator if available
+
+#### All Issues Mode
+Scrape all issues in a volume:
+
+```bash
+python scripts/selenium_webscraping_pages.py "Absolute Batman"
+```
+
+The script will:
+- Start from Issue #1 and continue through all available issues
+- Automatically stop when encountering a 404 or no images found
+- Create separate folders for each issue
 
 ### Advanced Usage
 
 ```bash
 # Scrape with specific URL
-python scripts/selenium_webscraping_pages "Absolute Batman" 1 --url "https://readcomiconline.li/Comic/Absolute-Batman/Issue-1?id=234426"
+python scripts/selenium_webscraping_pages.py "Absolute Batman" 1 --url "https://readcomiconline.li/Comic/Absolute-Batman/Issue-1?id=234426"
 
 # Run in headless mode (no GUI)
-python scripts/selenium_webscraping_pages "Absolute Batman" 1 --headless
-
-# Scrape multiple issues
-python scripts/selenium_webscraping_pages "Absolute Batman" 2
-python scripts/selenium_webscraping_pages "Absolute Batman" 3
+python scripts/selenium_webscraping_pages.py "Absolute Batman" --headless
 ```
 
 ## Output Structure
