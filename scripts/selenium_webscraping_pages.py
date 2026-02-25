@@ -231,14 +231,22 @@ def validate_downloaded_image(image_path: Path) -> bool:
     try:
         with Image.open(image_path) as img:
             width, height = img.size
+            aspect_ratio = width / height
 
-            # Validate dimensions
-            if width < MIN_COMIC_WIDTH or height < MIN_COMIC_HEIGHT:
+            # Validate dimensions with detailed logging
+            if width < MIN_COMIC_WIDTH:
+                print(f"  [VALIDATE] FAIL: width {width} < MIN_COMIC_WIDTH {MIN_COMIC_WIDTH}")
+                return False
+            if height < MIN_COMIC_HEIGHT:
+                print(f"  [VALIDATE] FAIL: height {height} < MIN_COMIC_HEIGHT {MIN_COMIC_HEIGHT}")
                 return False
 
-            # Validate aspect ratio
-            aspect_ratio = width / height
-            if not (MIN_ASPECT_RATIO <= aspect_ratio <= MAX_ASPECT_RATIO):
+            # Validate aspect ratio with detailed logging
+            if aspect_ratio < MIN_ASPECT_RATIO:
+                print(f"  [VALIDATE] FAIL: aspect {aspect_ratio:.2f} < MIN_ASPECT_RATIO {MIN_ASPECT_RATIO}")
+                return False
+            if aspect_ratio > MAX_ASPECT_RATIO:
+                print(f"  [VALIDATE] FAIL: aspect {aspect_ratio:.2f} > MAX_ASPECT_RATIO {MAX_ASPECT_RATIO}")
                 return False
 
         return True
@@ -481,8 +489,23 @@ def scrape_issue(volume_name: str, issue_number: str, url: Optional[str] = None,
     # Check for existing pages (resume capability)
     existing_pages = sorted(output_dir.glob("page_*.jpg"))
     if existing_pages:
-        print(f"[INFO] Found {len(existing_pages)} existing pages")
-        print(f"[INFO] Resuming from page {len(existing_pages) + 1}...")
+        # Extract page numbers from filenames to find the actual last page
+        page_numbers = []
+        for p in existing_pages:
+            match = re.search(r'page_(\d+)', p.name)
+            if match:
+                page_numbers.append(int(match.group(1)))
+
+        if page_numbers:
+            last_page = max(page_numbers)
+            print(f"[INFO] Found {len(existing_pages)} existing pages")
+            print(f"[INFO] Last page found: {last_page}")
+            print(f"[INFO] Resuming from page {last_page + 1}...")
+            start_page = last_page + 1
+        else:
+            start_page = 1
+    else:
+        start_page = 1
 
     # Set up Selenium driver
     driver = setup_driver(headless=headless)
@@ -513,10 +536,15 @@ def scrape_issue(volume_name: str, issue_number: str, url: Optional[str] = None,
             pass
 
         # Scrape pages
-        page_num = len(existing_pages) + 1
-        max_pages = 200  # Safety limit
+        page_num = start_page
+        max_pages = 50  # Safety limit - stop if downloading more than 50 pages
         downloaded_pages = []
         previous_hash = None
+        all_hashes = set()  # Track ALL hashes to detect duplicates across pages
+
+        print(f"[INFO] Starting from page {page_num} (max: {max_pages})")
+        print("[INFO] Will stop if detecting next issue or reaching page limit")
+        print()
 
         # Issue boundary detection
         expected_issue = issue_number
@@ -558,7 +586,9 @@ def scrape_issue(volume_name: str, issue_number: str, url: Optional[str] = None,
 
                 # Read hash for duplicate detection
                 with open(output_path, "rb") as f:
-                    previous_hash = get_image_hash(f.read())
+                    file_hash = get_image_hash(f.read())
+                    previous_hash = file_hash
+                    all_hashes.add(file_hash)
 
                 # Check page count against indicator
                 if total_pages_expected and page_num > total_pages_expected:
@@ -589,16 +619,18 @@ def scrape_issue(volume_name: str, issue_number: str, url: Optional[str] = None,
                 if validate_downloaded_image(output_path):
                     print(f"[{page_num}] [OK] Downloaded")
 
-                    # Check for duplicates
+                    # Check for duplicates against ALL downloaded pages
                     with open(output_path, "rb") as f:
                         current_hash = get_image_hash(f.read())
 
-                    if previous_hash and current_hash == previous_hash:
-                        print(f"[{page_num}] [WARN] Duplicate detected (end of comic)")
+                    if current_hash in all_hashes:
+                        print(f"[{page_num}] [WARN] Duplicate detected (image already downloaded)")
+                        print(f"[{page_num}] [WARN] This is likely the next issue - stopping")
                         output_path.unlink()  # Remove duplicate
                         break
 
                     previous_hash = current_hash
+                    all_hashes.add(current_hash)
                     downloaded_pages.append({
                         "page_number": page_num,
                         "filename": filename,
